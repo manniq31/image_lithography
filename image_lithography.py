@@ -92,8 +92,8 @@ def encode():
                 if color not in keys: break
             pixel = color
         counter += 1
-        image.append(pixel)
-    Image.frombytes("R,G,B",(width,height), bytes(image))
+        for i in range(0,3): image.append(pixel[i])
+    Image.frombytes("RGB",(width,height), bytes(image)).save(path)
     print("image was stored successfully")
     print("pixels needed: ", pixels, "\npixels used: ", width * height)
 
