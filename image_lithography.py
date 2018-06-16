@@ -108,8 +108,8 @@ def randomColor():
 
 def generatePassword():
     password_location = input("store the password as: ")
-    min_char = 80
-    max_char = 120
+    min_char = 16
+    max_char = 32
     byte_list = []
     for i in range(random.randint(min_char, max_char)):
         byte_list.append(random.getrandbits(8))
@@ -166,7 +166,7 @@ def hide(secret, path):
     new_image = []
     n = 0
     for byte in data:
-        try:
+        if n < len(secret):
             if counter == secret[n]:
                 new_byte = byte | 1
                 counter = 0
@@ -174,7 +174,7 @@ def hide(secret, path):
             else:
                 new_byte = byte & 254
                 counter += 1
-        except IndexError:
+        else:
             new_byte = byte & 254
             counter += 1
         new_image.append(new_byte)
