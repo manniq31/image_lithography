@@ -5,6 +5,7 @@ import random
 keys = []
 yes = ["Yes", "Y", "y", "yes", ""]
 
+
 def generateKeys():
     keys.clear()
     path = input("store keys as: ")
@@ -74,7 +75,7 @@ def encode():
     image = []
     i = 0
     counter = 0
-    for pixel in range(0,height*width):
+    for pixel in range(0, height * width):
         if i < len(text):
             if counter == ord(text[i]):
                 pixel = random.choice(keys)
@@ -92,8 +93,8 @@ def encode():
                 if color not in keys: break
             pixel = color
         counter += 1
-        for i in range(0,3): image.append(pixel[i])
-    Image.frombytes("RGB",(width,height), bytes(image)).save(path)
+        for i in range(0, 3): image.append(pixel[i])
+    Image.frombytes("RGB", (width, height), bytes(image)).save(path)
     print("image was stored successfully")
     print("pixels needed: ", pixels, "\npixels used: ", width * height)
 
@@ -159,31 +160,26 @@ def hide(secret, path):
     # use the last bit of every color for every pixel to store if its relevant for the string
     counter = 0
     with Image.open(path) as img:
-        data = img.getdata()
+        data = img.tobytes()
         mode = img.mode
         size = img.size
-    color = []
-    new_image= []
+    new_image = []
     n = 0
-    for pixel in data:
-        for i in range(0, 3):
-            color.append(pixel[i])
-            if n < len(secret):
-                if counter == secret[n]:
-                    color[i] = color[i] | 1
-                    counter = 0
-                    n += 1
-                else:
-                    color[i] = color[i] & 254
-                    counter += 1
+    for byte in data:
+        try:
+            if counter == secret[n]:
+                new_byte = byte | 1
+                counter = 0
+                n += 1
             else:
-                color[i] = color[i] & 254
+                new_byte = byte & 254
                 counter += 1
-        new_image.append(tuple(color))
-        color = []
-    Image.frombytes(mode, size, new_image).save(path)
+        except IndexError:
+            new_byte = byte & 254
+            counter += 1
+        new_image.append(new_byte)
+    Image.frombytes(mode, size, bytes(new_image)).save(path)
     print("immage saved succesfully")
-
 
 
 def discover():
@@ -197,12 +193,13 @@ def discover():
             with open(password_location, "rb") as file:
                 password = file.read()
         data = decrypt(password, secret)
-    else: data = secret
+    else:
+        data = secret
     try:
         text = data.decode('utf-8')
         if input("the data is text\ndo you want to display it? [Y/n]: ") in yes:
             print("text:\n", text)
-        file_path = input("store as (empty for not storing):") is not ""
+        file_path = input("store text as: ")
     except UnicodeDecodeError:
         file_path = input("the data can't be shown as text\nstore discovered file as: ")
     if file_path is not "":
@@ -210,18 +207,18 @@ def discover():
             file.write(secret)
         print("file stored succesfully")
 
+
 def discoverSecret(image_path):
     with Image.open(image_path) as img:
-        data = img.getdata()
+        data = img.tobytes()
     counter = 0
     secret = []
-    for pixel in data:
-            for i in range(0, 3):
-                if pixel[i] & 1:
-                    secret.append(counter)
-                    counter = 0
-                else:
-                    counter += 1
+    for byte in data:
+        if byte & 1:
+            secret.append(counter)
+            counter = 0
+        else:
+            counter += 1
     return bytes(secret)
 
 
