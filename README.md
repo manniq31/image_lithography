@@ -6,4 +6,4 @@ it uses the [pillow library](https://pypi.org/project/Pillow/) for reading/creat
 and [simple-crypt](https://pypi.org/project/simple-crypt/) for encryption/decryption<br><br>
 You can create images out of mostly random colored pixels to hide your text and use a "keys"-file to show  which pixels are relevant 
 (comparable to the mission mentioned before)<br>
-You can also hide text or even files in existing images. You have the option to encrypt your data using the simplecrypt library.
+You can also hide text or even files in existing images. You have the option to encrypt your data using simplecrypt.
