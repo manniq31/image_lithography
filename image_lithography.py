@@ -38,14 +38,12 @@ def decode():
         importKeys()
     counter = 0
     text = ""
-    img = Image.open(input("input image path: "))
-    pix = img.load()
-    for y in range(0, img.size[1]):
-        for x in range(0, img.size[0]):
-            if pix[x, y] in keys:
-                text += chr(counter)
-                counter = 0
-            counter += 1
+    image = Image.open(input("input image path: ")).getdata()
+    for pixel in image:
+        if pixel in keys:
+            text += chr(counter)
+            counter = 0
+        counter += 1
     print("text: ", text)
 
 
