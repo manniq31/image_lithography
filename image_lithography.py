@@ -61,7 +61,7 @@ def encode():
             else:
                 print("invalid input")
     text = input("enter a String to encode: ")
-    path = input("store image as: ") + ".png"
+    path = input("store image as: ")
     pixels = 1  # the pixel-0 at the beginning
     for c in text: pixels += ord(c)
     width = 0
