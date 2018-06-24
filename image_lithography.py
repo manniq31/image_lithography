@@ -1,18 +1,35 @@
 from PIL import Image
 from simplecrypt import encrypt, decrypt
 import random
+import sys
 
 keys = []
 yes = ["Yes", "Y", "y", "yes", ""]
+help = ("Help:\n"
+        "Usage: ImageLithography MODE  [Arguments depending on mode]\n"
+        "     give no mode and arguments to start in interactive mode\n\n\n"
+        
+        
+        "MODES: generate, hide, discover, password, keys\n"
+        "     generate:   generate an image with random colored pixels hiding a file or text\n"
+        "       arguments: TEXT or PATH TO A FILE you want to hide\n\n"
+        
+        "     hide:       hide a file or text in an existing image (overwrites existing image)\n"
+        "       arguments: TEXT or FILE, [PASSWORD (file or \"generate\")], IMAGE\n\n"
+        
+        "     discover:   discover data from an image and store it\n"
+        "       arguments: IMAGE, [PASSWORD], OUTPUT (file or \"display\""
+        "     password:   generate a password to use it in the \"hide\" mode"
+        "     keys:       generate keys to use them in the \"encode\" mode")
 
 
 def generateKeys():
     keys.clear()
     path = input("store keys as: ")
-    for i in range(0, 6):
-        x = randomColor()
+    for i in range(6):
+        color = randomColor()
         if x not in keys:
-            keys.append(x)
+            keys.append(color)
     print("keys: ", keys)
     with open(path, "w") as file:
         file.write(str(keys))
@@ -96,7 +113,8 @@ def encode():
         for i in range(0, 3): image.append(pixel[i])
     Image.frombytes("RGB", (width, height), bytes(image)).save(path)
     print("image was stored successfully")
-    print("pixels needed: ", pixels, "\npixels used: ", width * height)
+    print("pixels needed: ", pixels, "\n"
+          "pixels used: ", width * height)
 
 
 def randomColor():
@@ -124,17 +142,12 @@ def hideString():
     while True:
         path = input("choose a png image to hide string in: ")
         text = input("enter the String you want to hide: ")
-        img = Image.open(path)
-        pixels = 0
         if input("encrypt the string? [Y/n]: ") in yes:
             password = generatePassword()
             secret = encrypt(password, text)
         else:
             secret = bytes(text.encode('utf-8'))
-        for b in secret:
-            pixels += b + 1
-        if pixels < img.width * img.height: break
-        print("the image is to small to contain that string\nchoose another one with more pixels")
+        if validateImage(secret, image_path): break
     hide(secret, path)
 
 
@@ -142,7 +155,6 @@ def hideFile():
     while True:
         file_path = input("file you want to hide: ")
         image_path = input("image you want to hide the file in: ")
-        img = Image.open(image_path)
         file = open(file_path, "rb").read()
         if input("encrypt the file? [Y/n]: ") in yes:
             password = generatePassword()
@@ -150,11 +162,16 @@ def hideFile():
         else:
             secret = file
         pixels = 0
-        for b in secret: pixels += b + 1
-        if pixels < img.width * img.height: break
-        print("the image is to small to contain that string\nchoose another one with more pixels")
+        if validateImage(secret, image_path): break
     hide(secret, image_path)
 
+def validateImage(secret, path):
+    pixels = 0
+    for b in secret: pixels += b + 1
+    if pixels < img.width * img.height:
+        print("the image is to small to contain the data\nchoose another one with more pixels")
+        return false
+    return true
 
 def hide(secret, path):
     # use the last bit of every color for every pixel to store if its relevant for the string
@@ -197,11 +214,13 @@ def discover():
         data = secret
     try:
         text = data.decode('utf-8')
-        if input("the data is text\ndo you want to display it? [Y/n]: ") in yes:
-            print("text:\n", text)
+        if input("the data is text\n"
+                 "do you want to display it? [Y/n]: ") in yes:
+            print("text:\n",text)
         file_path = input("store text as: ")
     except UnicodeDecodeError:
-        file_path = input("the data can't be shown as text\nstore discovered file as: ")
+        file_path = input("the data can't be shown as text\n"
+                          "store discovered file as: ")
     if file_path is not "":
         with open(file_path, "wb") as file:
             file.write(secret)
@@ -221,27 +240,78 @@ def discoverSecret(image_path):
             counter += 1
     return bytes(secret)
 
+def main():
+    while True:
+        task = input(
+            "1) encode\n"
+            "2) decode\n"
+            "3) generate Keys\n"
+            "4) import Keys\n"
+            "5) hide string in existing image\n"
+            "6) hide file in image\n"
+            "7) discover file/string\n"
+            "input: ")
+        if task == "1":
+            encode()
+        elif task == "2":
+            decode()
+        elif task == "3":
+            generateKeys()
+        elif task == "4":
+            importKeys()
+        elif task == "5":
+            hideString()
+        elif task == "6":
+            hideFile()
+        elif task == "7":
+            discover()
+        elif task == "exit":
+            exit()
+        else:
+            print("invalid input")
+        input("press enter to continue ")
 
-while True:
-    task = input(
-        "1) encode\n2) decode\n3) generate Keys\n4) import Keys\n5) hide string in existing image\n"
-        "6) hide file in image\n7) discover file/string\ninput: ")
-    if task == "1":
-        encode()
-    elif task == "2":
-        decode()
-    elif task == "3":
-        generateKeys()
-    elif task == "4":
-        importKeys()
-    elif task == "5":
-        hideString()
-    elif task == "6":
-        hideFile()
-    elif task == "7":
-        discover()
-    elif task == "exit":
+if __name__== "__main__":
+    if len(sys.argv) == 1:
+        main()
+    elif sys.argv[1] == "help":
+        print(help)
+
+    #hide function
+    elif sys.argv[1] == "hide":
+        if len(sys.argv) == 3:
+           hide(sys.argv[1],sys.argv[2])
+        elif len(sys.argv) == 4:
+            if sys.argv[2] == "generate":
+                password = generatePassword()
+            else:
+                with open(sys.argv[2],"rb") as file:
+                    password = file.read()
+            with open(sys.argv[1]) as file:
+                secret = encrypt(password, file)
+            path = sys.argv[3]
+            hide(secret, path)
+        else: print("wrong amount of arguments")
+
+    #discover function
+    elif sys.argv[1] == "discover":
+        if len(sys.argv) == 3:
+            secret = discoverSecret(sys.argv[1])
+        elif len(sys.argv) == 4:
+            with open(sys.argv[2], "rb") as file:
+                secret = decrypt(file.read(), discoverSecret(sys.argv[1]))
+        else:
+            print("wrong amount of arguments")
+            exit()
+        if sys.argv[len(sys.argv) - 1] == "display":
+            try:
+                text = secret.decode('utf-8')
+                print("text:\n",text)
+                exit()
+            except UnicodeDecodeError:
+                file_path = input("the data can't be shown as text\nstore it as: ")
+        with open(sys.argv[len(sys.argv) - 1],"wb") as file:
+            file.write(secret)
         exit()
-    else:
-        print("invalid input")
-    input("press enter to continue ")
+
+    else: print("invalid arguments\nprint help dialog with \"help\"")
