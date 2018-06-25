@@ -18,9 +18,9 @@ instructions = ("Help:\n"
         "       arguments: TEXT or FILE, [PASSWORD (file or \"generate\")], IMAGE\n\n"
         
         "     discover:   discover data from an image and store it\n"
-        "       arguments: IMAGE, [PASSWORD], OUTPUT (file or \"display\""
-        "     password:   generate a password to use it in the \"hide\" mode"
-        "     keys:       generate keys to use them in the \"encode\" mode")
+                "       arguments: IMAGE, [PASSWORD], OUTPUT (file or \"display\")\n"
+                "     password:   generate a password to use it in the \"hide\" mode\n"
+                "     keys:       generate keys to use them in the \"encode\" mode\n")
 
 
 def generateKeys():
@@ -270,40 +270,40 @@ def main():
         input("press enter to continue ")
 
 
-def parseInput():
-    if len(sys.argv) == 1:
+def parseInput(arguments):
+    if not arguments:
         main()
-    elif sys.argv[1] == "help":
+    elif arguments[0] == "help":
         print(instructions)
 
     # hide function
-    elif sys.argv[1] == "hide":
-        if len(sys.argv) == 3:
-            hide(sys.argv[1], sys.argv[2])
-        elif len(sys.argv) == 4:
-            if sys.argv[2] == "generate":
+    elif arguments[0] == "hide":
+        if len(arguments) == 3:
+            hide(open(arguments[1], "rb").read(), arguments[2])
+        elif len(arguments) == 4:
+            if arguments[2] == "generate":
                 password = generatePassword()
             else:
-                with open(sys.argv[2], "rb") as file:
+                with open(arguments[2], "rb") as file:
                     password = file.read()
-            with open(sys.argv[1]) as file:
-                secret = encrypt(password, file)
-            path = sys.argv[3]
+            with open(arguments[1], "rb") as file:
+                secret = encrypt(password, file.read())
+            path = arguments[3]
             hide(secret, path)
         else:
             print("wrong amount of arguments")
 
     # discover function
-    elif sys.argv[1] == "discover":
-        if len(sys.argv) == 3:
-            secret = discoverSecret(sys.argv[1])
-        elif len(sys.argv) == 4:
-            with open(sys.argv[2], "rb") as file:
-                secret = decrypt(file.read(), discoverSecret(sys.argv[1]))
+    elif arguments[0] == "discover":
+        if len(arguments) == 3:
+            secret = discoverSecret(arguments[1])
+        elif len(arguments) == 4:
+            with open(arguments[2], "rb") as file:
+                secret = decrypt(file.read(), discoverSecret(arguments[1]))
         else:
             print("wrong amount of arguments")
             exit()
-        if sys.argv[len(sys.argv) - 1] == "display":
+        if arguments[len(arguments) - 1] == "display":
             try:
                 text = secret.decode('utf-8')
                 print("text:\n", text)
@@ -311,7 +311,7 @@ def parseInput():
             except UnicodeDecodeError:
                 path = input("the data can't be shown as text\nstore it as: ")
         else:
-            path = sys.argv[len(sys.argv) - 1]
+            path = arguments[len(arguments) - 1]
         with open(path, "wb") as file:
             file.write(secret)
         exit()
@@ -320,4 +320,4 @@ def parseInput():
         print("invalid arguments\nprint help dialog with \"help\"")
 
 if __name__== "__main__":
-    parseInput()
+    parseInput(sys.argv[1:])
