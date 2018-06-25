@@ -5,7 +5,7 @@ import sys
 
 keys = []
 yes = ["Yes", "Y", "y", "yes", ""]
-help = ("Help:\n"
+instructions = ("Help:\n"
         "Usage: ImageLithography MODE  [Arguments depending on mode]\n"
         "     give no mode and arguments to start in interactive mode\n\n\n"
         
@@ -28,7 +28,7 @@ def generateKeys():
     path = input("store keys as: ")
     for i in range(6):
         color = randomColor()
-        if x not in keys:
+        if color not in keys:
             keys.append(color)
     print("keys: ", keys)
     with open(path, "w") as file:
@@ -145,7 +145,7 @@ def hideString():
             secret = encrypt(password, text)
         else:
             secret = bytes(text.encode('utf-8'))
-        if validateImage(secret, image_path): break
+        if validateImage(secret, path): break
     hide(secret, path)
 
 
@@ -159,17 +159,17 @@ def hideFile():
             secret = encrypt(password, file)
         else:
             secret = file
-        pixels = 0
         if validateImage(secret, image_path): break
     hide(secret, image_path)
 
 def validateImage(secret, path):
     pixels = 0
     for b in secret: pixels += b + 1
-    if pixels < img.width * img.height:
-        print("the image is to small to contain the data\nchoose another one with more pixels")
-        return false
-    return true
+    with Image.open(path) as img:
+        if pixels < img.width * img.height:
+            print("the image is to small to contain the data\nchoose another one with more pixels")
+            return False
+    return True
 
 def hide(secret, path):
     # use the last bit of every color for every pixel to store if its relevant for the string
@@ -269,29 +269,31 @@ def main():
             print("invalid input")
         input("press enter to continue ")
 
-if __name__== "__main__":
+
+def parseInput():
     if len(sys.argv) == 1:
         main()
     elif sys.argv[1] == "help":
-        print(help)
+        print(instructions)
 
-    #hide function
+    # hide function
     elif sys.argv[1] == "hide":
         if len(sys.argv) == 3:
-           hide(sys.argv[1],sys.argv[2])
+            hide(sys.argv[1], sys.argv[2])
         elif len(sys.argv) == 4:
             if sys.argv[2] == "generate":
                 password = generatePassword()
             else:
-                with open(sys.argv[2],"rb") as file:
+                with open(sys.argv[2], "rb") as file:
                     password = file.read()
             with open(sys.argv[1]) as file:
                 secret = encrypt(password, file)
             path = sys.argv[3]
             hide(secret, path)
-        else: print("wrong amount of arguments")
+        else:
+            print("wrong amount of arguments")
 
-    #discover function
+    # discover function
     elif sys.argv[1] == "discover":
         if len(sys.argv) == 3:
             secret = discoverSecret(sys.argv[1])
@@ -304,12 +306,18 @@ if __name__== "__main__":
         if sys.argv[len(sys.argv) - 1] == "display":
             try:
                 text = secret.decode('utf-8')
-                print("text:\n",text)
+                print("text:\n", text)
                 exit()
             except UnicodeDecodeError:
-                file_path = input("the data can't be shown as text\nstore it as: ")
-        with open(sys.argv[len(sys.argv) - 1],"wb") as file:
+                path = input("the data can't be shown as text\nstore it as: ")
+        else:
+            path = sys.argv[len(sys.argv) - 1]
+        with open(path, "wb") as file:
             file.write(secret)
         exit()
 
-    else: print("invalid arguments\nprint help dialog with \"help\"")
+    else:
+        print("invalid arguments\nprint help dialog with \"help\"")
+
+if __name__== "__main__":
+    parseInput()
