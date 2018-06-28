@@ -199,7 +199,7 @@ def hide(secret, path):
     new_image = []
     for index, byte in enumerate(image[:len(image) - 1]):
         if index < len(bits):
-            if bits[index] == 1:
+            if bits[index] & 1:
                 new_byte = byte | 1
             else:
                 new_byte = byte & 254
@@ -250,20 +250,15 @@ def discoverSecret(image_path):
     secret = []
     for pixel in data[:len(data) - 1]:
         bits.append(pixel & 1)
-
-    byte = 0
-    counter = 0
-    for index, bit in enumerate(bits, 1):
-        byte = (byte << 1) | bit
-        if byte == end_byte and 1 not in bits[index:]:
-            break
-        counter += 1
-        if counter == 8:
-            secret.append(byte)
-            counter = 0
-            byte = 0
-
+    for index, byte in enumerate([bits[i:i + 8] for i in range(0, len(bits), 8)]):
+        new_byte = 0
+        for bit in byte:
+            new_byte = (new_byte << 1) | bit
+        if new_byte == end_byte:
+            end_index = index
+        secret.append(new_byte)
     print("data discovered")
+    secret = secret[:end_index]
     return bytes(secret)
 
 
@@ -327,6 +322,7 @@ def parseInput(arguments):
                     password = file.read()
             if "text:" in arguments[1]:
                 secret = encrypt(password, bytes(arguments[1][5:], 'utf-8'))
+                print("encryption successful")
             else:
                 with open(arguments[1], "rb") as file:
                     secret = encrypt(password, file.read())
@@ -344,7 +340,7 @@ def parseInput(arguments):
         elif len(arguments) == 4:
             with open(arguments[2], "rb") as file:
                 secret = decrypt(file.read(), discoverSecret(arguments[1]))
-                print("secret decrypted")
+                print("data decrypted")
         else:
             print(invalidArguments)
             exit()
@@ -357,8 +353,9 @@ def parseInput(arguments):
                 path = input("the data can't be shown as text\nstore it as: ")
         else:
             path = arguments[len(arguments) - 1]
-        with open(path, "wb") as file:
-            file.write(secret)
+        if path:
+            with open(path, "wb") as file:
+                file.write(secret)
 
     else:
         print(invalidArguments)
