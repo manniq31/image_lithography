@@ -12,7 +12,7 @@ instructions = ("Help:\n"
 
                 "MODES: generate, hide, discover, password, keys\n"
                 "     generate:   generate an image with random colored pixels hiding a file or text\n"
-                "       arguments: TEXT or PATH TO A FILE you want to hide\n\n"
+                "       arguments \"text: ...\" or PATH TO A FILE you want to hide\n\n"
 
                 "     hide:       hide a file or text in an existing image (overwrites existing image)\n"
                 "       arguments: TEXT or FILE, [PASSWORD (file or \"generate\")], IMAGE\n\n"
@@ -308,11 +308,14 @@ def parseInput(arguments):
     # hide function
     elif arguments[0] == "hide":
         if len(arguments) == 3:
-            with open(arguments[1], "rb") as file:
-                secret = file.read()
-                if not secret:
-                    print("there is no data to hide")
-                    exit()
+            if "text:" in arguments[1]:
+                secret = bytes(arguments[1][5:], 'utf-8')
+            else:
+                with open(arguments[1], "rb") as file:
+                    secret = file.read()
+            if not secret:
+                print("there is no data to hide")
+                exit()
             path = arguments[2]
             if validateImage(secret, path):
                 hide(secret, path)
@@ -322,9 +325,12 @@ def parseInput(arguments):
             else:
                 with open(arguments[2], "rb") as file:
                     password = file.read()
-            with open(arguments[1], "rb") as file:
-                secret = encrypt(password, file.read())
-                print("encryption successful")
+            if "text:" in arguments[1]:
+                secret = encrypt(password, bytes(arguments[1][5:], 'utf-8'))
+            else:
+                with open(arguments[1], "rb") as file:
+                    secret = encrypt(password, file.read())
+                    print("encryption successful")
             path = arguments[3]
             if validateImage(secret, path):
                 hide(secret, path)
