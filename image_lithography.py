@@ -6,21 +6,22 @@ import sys
 keys = []
 yes = ["Yes", "Y", "y", "yes", ""]
 instructions = ("Help:\n"
-        "Usage: ImageLithography MODE  [Arguments depending on mode]\n"
-        "     give no mode and arguments to start in interactive mode\n\n\n"
-        
-        
-        "MODES: generate, hide, discover, password, keys\n"
-        "     generate:   generate an image with random colored pixels hiding a file or text\n"
-        "       arguments: TEXT or PATH TO A FILE you want to hide\n\n"
-        
-        "     hide:       hide a file or text in an existing image (overwrites existing image)\n"
-        "       arguments: TEXT or FILE, [PASSWORD (file or \"generate\")], IMAGE\n\n"
-        
-        "     discover:   discover data from an image and store it\n"
+                "Usage: ImageLithography MODE  [Arguments depending on mode]\n"
+                "     give no mode and arguments to start in interactive mode\n\n\n"
+
+
+                "MODES: generate, hide, discover, password, keys\n"
+                "     generate:   generate an image with random colored pixels hiding a file or text\n"
+                "       arguments: TEXT or PATH TO A FILE you want to hide\n\n"
+
+                "     hide:       hide a file or text in an existing image (overwrites existing image)\n"
+                "       arguments: TEXT or FILE, [PASSWORD (file or \"generate\")], IMAGE\n\n"
+
+                "     discover:   discover data from an image and store it\n"
                 "       arguments: IMAGE, [PASSWORD], OUTPUT (file or \"display\")\n"
                 "     password:   generate a password to use it in the \"hide\" mode\n"
                 "     keys:       generate keys to use them in the \"encode\" mode\n")
+invalidArguments = "wrong (amount of) arguments\nprint help with  \"ImageLithography help\""
 
 
 def generateKeys():
@@ -80,13 +81,15 @@ def encode():
     text = input("enter a String to encode: ")
     path = input("store image as: ")
     pixels = 1  # the pixel-0 at the beginning
-    for c in text: pixels += ord(c)
+    for c in text:
+        pixels += ord(c)
     width = 0
     height = 0
     # generate an approximately 16:9 image
     while width * height < pixels:
         width += 1
-        if height / width < 0.53: height += 1
+        if height / width < 0.53:
+            height += 1
     image = []
     i = 0
     counter = 0
@@ -105,10 +108,12 @@ def encode():
         else:
             while True:
                 color = randomColor()
-                if color not in keys: break
+                if color not in keys:
+                    break
             pixel = color
         counter += 1
-        for i in range(0, 3): image.append(pixel[i])
+        for i in range(0, 3):
+            image.append(pixel[i])
     Image.frombytes("RGB", (width, height), bytes(image)).save(path)
     print("image was stored successfully")
     print("pixels needed: ", pixels, "\n"
@@ -145,7 +150,8 @@ def hideString():
             secret = encrypt(password, text)
         else:
             secret = bytes(text.encode('utf-8'))
-        if validateImage(secret, path): break
+        if validateImage(secret, path):
+            break
     hide(secret, path)
 
 
@@ -159,42 +165,53 @@ def hideFile():
             secret = encrypt(password, file)
         else:
             secret = file
-        if validateImage(secret, image_path): break
+        if validateImage(secret, image_path):
+            break
     hide(secret, image_path)
 
+
 def validateImage(secret, path):
-    pixels = 0
-    for b in secret: pixels += b + 1
     with Image.open(path) as img:
-        if pixels < img.width * img.height:
+        if len(secret) * 8 > len(img.tobytes()) - 9:  # space for data, end_byte and indicator
             print("the image is to small to contain the data\nchoose another one with more pixels")
             return False
-    return True
+        else:
+            return True
+
 
 def hide(secret, path):
-    # use the last bit of every color for every pixel to store if its relevant for the string
-    counter = 0
+    # use the last bit of every color for every pixel to store a bit of the data
+    bits = []
+    for byte in secret:
+        for i in range(8):
+            bits.append(((byte << i) & 128) // 128)
+    # add an end byte to determine secret when discovering
+    if secret[len(secret) - 1] == 255:
+        end_byte = 0
+    else:
+        end_byte = 1
+    bits += [end_byte, ] * 8
+
     with Image.open(path) as img:
-        data = img.tobytes()
+        image = img.tobytes()
         mode = img.mode
         size = img.size
     new_image = []
-    n = 0
-    for byte in data:
-        if n < len(secret):
-            if counter == secret[n]:
+    for index, byte in enumerate(image[:len(image) - 1]):
+        if index < len(bits):
+            if bits[index] == 1:
                 new_byte = byte | 1
-                counter = 0
-                n += 1
             else:
                 new_byte = byte & 254
-                counter += 1
         else:
             new_byte = byte & 254
-            counter += 1
         new_image.append(new_byte)
+    if end_byte:
+        new_image.append(image[len(image) - 1] | 1)
+    else:
+        new_image.append(image[len(image) - 1] & 254)
     Image.frombytes(mode, size, bytes(new_image)).save(path)
-    print("immage saved succesfully")
+    print("image saved successfully")
 
 
 def discover():
@@ -214,7 +231,7 @@ def discover():
         text = data.decode('utf-8')
         if input("the data is text\n"
                  "do you want to display it? [Y/n]: ") in yes:
-            print("text:\n",text)
+            print("text:\n", text)
         file_path = input("store text as: ")
     except UnicodeDecodeError:
         file_path = input("the data can't be shown as text\n"
@@ -228,15 +245,27 @@ def discover():
 def discoverSecret(image_path):
     with Image.open(image_path) as img:
         data = img.tobytes()
-    counter = 0
+    end_byte = (data[len(data) - 1] & 1) * 255
+    bits = []
     secret = []
-    for byte in data:
-        if byte & 1:
-            secret.append(counter)
+    for pixel in data[:len(data) - 1]:
+        bits.append(pixel & 1)
+
+    byte = 0
+    counter = 0
+    for index, bit in enumerate(bits, 1):
+        byte = (byte << 1) | bit
+        if byte == end_byte and 1 not in bits[index:]:
+            break
+        counter += 1
+        if counter == 8:
+            secret.append(byte)
             counter = 0
-        else:
-            counter += 1
+            byte = 0
+
+    print("data discovered")
     return bytes(secret)
+
 
 def main():
     while True:
@@ -279,7 +308,14 @@ def parseInput(arguments):
     # hide function
     elif arguments[0] == "hide":
         if len(arguments) == 3:
-            hide(open(arguments[1], "rb").read(), arguments[2])
+            with open(arguments[1], "rb") as file:
+                secret = file.read()
+                if not secret:
+                    print("there is no data to hide")
+                    exit()
+            path = arguments[2]
+            if validateImage(secret, path):
+                hide(secret, path)
         elif len(arguments) == 4:
             if arguments[2] == "generate":
                 password = generatePassword()
@@ -288,10 +324,12 @@ def parseInput(arguments):
                     password = file.read()
             with open(arguments[1], "rb") as file:
                 secret = encrypt(password, file.read())
+                print("encryption successful")
             path = arguments[3]
-            hide(secret, path)
+            if validateImage(secret, path):
+                hide(secret, path)
         else:
-            print("wrong amount of arguments")
+            print(invalidArguments)
 
     # discover function
     elif arguments[0] == "discover":
@@ -300,8 +338,9 @@ def parseInput(arguments):
         elif len(arguments) == 4:
             with open(arguments[2], "rb") as file:
                 secret = decrypt(file.read(), discoverSecret(arguments[1]))
+                print("secret decrypted")
         else:
-            print("wrong amount of arguments")
+            print(invalidArguments)
             exit()
         if arguments[len(arguments) - 1] == "display":
             try:
@@ -314,10 +353,10 @@ def parseInput(arguments):
             path = arguments[len(arguments) - 1]
         with open(path, "wb") as file:
             file.write(secret)
-        exit()
 
     else:
-        print("invalid arguments\nprint help dialog with \"help\"")
+        print(invalidArguments)
 
-if __name__== "__main__":
+
+if __name__ == "__main__":
     parseInput(sys.argv[1:])
