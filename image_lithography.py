@@ -117,7 +117,7 @@ def encode():
     Image.frombytes("RGB", (width, height), bytes(image)).save(path)
     print("image was stored successfully")
     print("pixels needed: ", pixels, "\n"
-          "pixels used: ", width * height)
+                                     "pixels used: ", width * height)
 
 
 def randomColor():
@@ -181,35 +181,32 @@ def validateImage(secret, path):
 
 def hide(secret, path):
     # use the last bit of every color for every pixel to store a bit of the data
-    bits = []
-    for byte in secret:
-        for i in range(8):
-            bits.append(((byte << i) & 128) // 128)
     # add an end byte to determine secret when discovering
     if secret[len(secret) - 1] == 255:
         end_byte = 0
     else:
         end_byte = 1
-    bits += [end_byte, ] * 8
 
     with Image.open(path) as img:
         image = img.tobytes()
         mode = img.mode
         size = img.size
     new_image = []
-    for index, byte in enumerate(image[:len(image) - 1]):
-        if index < len(bits):
-            if bits[index] & 1:
-                new_byte = byte | 1
+    index = 0
+    for byte in secret:
+        for i in range(8):
+            if ((byte << i) & 128) // 128:
+                new_image.append(image[index] | 1)
             else:
-                new_byte = byte & 254
-        else:
-            new_byte = byte & 254
-        new_image.append(new_byte)
-    if end_byte:
-        new_image.append(image[len(image) - 1] | 1)
-    else:
-        new_image.append(image[len(image) - 1] & 254)
+                new_image.append(image[index] & 254)
+        index += 1
+    for i in range(8):
+        new_image.append((image[index] & 254) | end_byte)
+        index += 1
+    for byte in image[index:len(image) - 1]:
+        new_image.append(byte & 254)
+
+    new_image.append((image[len(image) - 1] & 254) | end_byte)
     Image.frombytes(mode, size, bytes(new_image)).save(path)
     print("image saved successfully")
 
@@ -258,8 +255,7 @@ def discoverSecret(image_path):
             end_index = index
         secret.append(new_byte)
     print("data discovered")
-    secret = secret[:end_index]
-    return bytes(secret)
+    return bytes(secret[:end_index])
 
 
 def main():
