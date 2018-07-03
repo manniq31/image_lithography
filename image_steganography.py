@@ -6,7 +6,7 @@ import sys
 keys = []
 yes = ["Yes", "Y", "y", "yes", ""]
 instructions = ("Help:\n"
-                "Usage: ImageLithography MODE  [Arguments depending on mode]\n"
+                "Usage: ImageSteganography MODE  [Arguments depending on mode]\n"
                 "     give no mode and arguments to start in interactive mode\n\n\n"
 
 
@@ -21,7 +21,7 @@ instructions = ("Help:\n"
                 "       arguments: IMAGE, [PASSWORD], OUTPUT (file or \"display\")\n"
                 "     password:   generate a password to use it in the \"hide\" mode\n"
                 "     keys:       generate keys to use them in the \"encode\" mode\n")
-invalidArguments = "wrong (amount of) arguments\nprint help with  \"ImageLithography help\""
+invalidArguments = "wrong (amount of) arguments\nprint help with  \"ImageSteganography help\""
 
 
 def generateKeys():

@@ -1,4 +1,4 @@
-# Image lithography
+# Image Steganography
 Hide files or text inside an image.<br><br>
 This project was inspired by a ["programming mission"](http://www.hackthissite.org/missions/prog/2/) 
 of [hackthissite](http://www.hackthissite.org)<br> 
