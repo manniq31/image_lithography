@@ -199,7 +199,7 @@ def hide(secret, path):
                 new_image.append(image[index] | 1)
             else:
                 new_image.append(image[index] & 254)
-        index += 1
+            index += 1
     for i in range(8):
         new_image.append((image[index] & 254) | end_byte)
         index += 1
