@@ -172,7 +172,7 @@ def hideFile():
 
 def validateImage(secret, path):
     with Image.open(path) as img:
-        if len(secret) * 8 > len(img.tobytes()) - 9:  # space for data, end_byte and indicator
+        if len(secret) * 8 > len(img.tobytes()) - 32:  # space for data, end_byte and indicator
             print("the image is to small to contain the data\nchoose another one with more pixels")
             return False
         else:
@@ -180,17 +180,16 @@ def validateImage(secret, path):
 
 
 def hide(secret, path):
-    # use the last bit of every color for every pixel to store a bit of the data
-    # add an end byte to determine secret when discovering
-    if secret[len(secret) - 1] == 255:
-        end_byte = 0
-    else:
-        end_byte = 1
-
     with Image.open(path) as img:
         image = img.tobytes()
         mode = img.mode
         size = img.size
+
+    #store how long the secret is in order to not have to scan or change the hole picture later
+    secret_length_binary = []
+    for c in bin(len(secret))[2:]:
+        secret_length_binary.append(int(c,2))
+    secret = [0,]* (32-len(secret_length_binary)) + secret_length_binary + secret
     new_image = []
     index = 0
     for byte in secret:
@@ -200,14 +199,9 @@ def hide(secret, path):
             else:
                 new_image.append(image[index] & 254)
             index += 1
-    for i in range(8):
-        new_image.append((image[index] & 254) | end_byte)
-        index += 1
-    for byte in image[index:len(image) - 1]:
-        new_image.append(byte & 254)
 
-    new_image.append((image[len(image) - 1] & 254) | end_byte)
     Image.frombytes(mode, size, bytes(new_image)).save(path)
+    print("had to loop over ", (100 * len(secret)) / len(image), "% of the image")
     print("image saved successfully")
 
 
@@ -241,21 +235,22 @@ def discover():
 
 def discoverSecret(image_path):
     with Image.open(image_path) as img:
-        data = img.tobytes()
-    end_byte = (data[len(data) - 1] & 1) * 255
+        image = img.tobytes()
     bits = []
     secret = []
-    for pixel in data[:len(data) - 1]:
+    secret_length_binary = ""
+    for byte in image[:32]:
+        secret_length_binary += str(byte & 1)
+    secret_length = int(secret_length_binary,2)
+    for pixel in image[32:secret_length]:
         bits.append(pixel & 1)
     for index, byte in enumerate([bits[i:i + 8] for i in range(0, len(bits), 8)]):
         new_byte = 0
         for bit in byte:
             new_byte = (new_byte << 1) | bit
-        if new_byte == end_byte:
-            end_index = index
-        secret.append(new_byte)
+    print("had to loop over ", (100*len(secret))/len(image), "% of the video")
     print("data discovered")
-    return bytes(secret[:end_index])
+    return bytes(secret)
 
 
 def main():
