@@ -143,7 +143,7 @@ def generatePassword():
 
 def hideString():
     while True:
-        path = input("choose a png image to hide string in: ")
+        path = input("choose a png image to hide string in : ")
         text = input("enter the String you want to hide: ")
         if input("encrypt the string? [Y/n]: ") in yes:
             password = generatePassword()
@@ -172,8 +172,9 @@ def hideFile():
 
 def validateImage(secret, path):
     with Image.open(path) as img:
-        if len(secret) * 8 > len(img.tobytes()) - 32:  # space for data, end_byte and indicator
-            print("the image is to small to contain the data\nchoose another one with more pixels")
+        storage = len(img.tobytes()) - 32
+        if len(secret) * 8 > storage :  # space for data, end_byte and indicator
+            print("the image is to small to contain the data\nchoose another one with more pixels\nthis image can store ", storage / 8, " Bytes")
             return False
         else:
             return True
@@ -186,10 +187,11 @@ def hide(secret, path):
         size = img.size
 
     #store how long the secret is in order to not have to scan or change the hole picture later
-    secret_length_binary = []
-    for c in bin(len(secret))[2:]:
-        secret_length_binary.append(int(c,2))
-    secret = [0,]* (32-len(secret_length_binary)) + secret_length_binary + secret
+    secret_length_binary = "0" * (32-len(bin(len(secret))[2:])) + bin(len(secret))[2:]
+    start_bytes = []
+    for i in range(0,32,8):
+        start_bytes.append(int(secret_length_binary[i:i+8],2))
+    secret = start_bytes + list(secret)
     new_image = []
     index = 0
     for byte in secret:
@@ -199,9 +201,9 @@ def hide(secret, path):
             else:
                 new_image.append(image[index] & 254)
             index += 1
-
+    print("hidden ", len(secret)-8 ,"Bytes using ", 100 * (index / len(image)), "% of the image")
+    new_image += list(image)[index:]
     Image.frombytes(mode, size, bytes(new_image)).save(path)
-    print("had to loop over ", (100 * len(secret)) / len(image), "% of the image")
     print("image saved successfully")
 
 
@@ -241,14 +243,15 @@ def discoverSecret(image_path):
     secret_length_binary = ""
     for byte in image[:32]:
         secret_length_binary += str(byte & 1)
-    secret_length = int(secret_length_binary,2)
-    for pixel in image[32:secret_length]:
+    secret_end = int(secret_length_binary,2)*8+32
+    for pixel in image[32:secret_end]:
         bits.append(pixel & 1)
     for index, byte in enumerate([bits[i:i + 8] for i in range(0, len(bits), 8)]):
         new_byte = 0
         for bit in byte:
             new_byte = (new_byte << 1) | bit
-    print("had to loop over ", (100*len(secret))/len(image), "% of the video")
+        secret.append(new_byte)
+    print("discovered ", len(secret), "Bytes using ", 100 * (len(bits) / len(image)), "% of the image")
     print("data discovered")
     return bytes(secret)
 
