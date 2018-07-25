@@ -2,6 +2,7 @@ from PIL import Image
 from simplecrypt import encrypt, decrypt
 import random
 import sys
+from time import time
 
 keys = []
 yes = ["Yes", "Y", "y", "yes", ""]
@@ -181,8 +182,9 @@ def validateImage(secret, path):
 
 
 def hide(secret, path):
+    start = time()
     with Image.open(path) as img:
-        image = img.tobytes()
+        image = list(img.tobytes())
         mode = img.mode
         size = img.size
 
@@ -192,19 +194,18 @@ def hide(secret, path):
     for i in range(0,32,8):
         start_bytes.append(int(secret_length_binary[i:i+8],2))
     secret = start_bytes + list(secret)
-    new_image = []
     index = 0
     for byte in secret:
         for i in range(8):
             if ((byte << i) & 128) // 128:
-                new_image.append(image[index] | 1)
+                image[index] = image[index] | 1
             else:
-                new_image.append(image[index] & 254)
+                image[index] = image[index] & 254
             index += 1
     print("hidden ", len(secret)-8 ,"Bytes using ", 100 * (index / len(image)), "% of the image")
-    new_image += list(image)[index:]
-    Image.frombytes(mode, size, bytes(new_image)).save(path)
-    print("image saved successfully")
+    Image.frombytes(mode, size, bytes(image)).save(path)
+    end = time()
+    print("image saved successfully\noperation took {:.2} seconds".format(end-start))
 
 
 def discover():
